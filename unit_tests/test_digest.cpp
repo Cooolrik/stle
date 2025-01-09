@@ -1,7 +1,7 @@
 // ctle Copyright (c) 2023 Ulrik Lindahl
 // Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
 
-#include "../ctle/hash.h"
+#include "../ctle/digest.h"
 #include "../ctle/string_funcs.h"
 
 #include "unit_tests.h"
@@ -12,9 +12,9 @@
 using namespace ctle;
 
 template<size_t _Size>
-static hash<_Size> random_hash()
+static digest<_Size> random_hash()
 {
-	hash<_Size> val;
+	digest<_Size> val;
 	for( size_t inx=0; inx<_Size/64; ++inx )
 	{
 		val._data_q[inx] = random_value<uint64_t>();
@@ -24,7 +24,7 @@ static hash<_Size> random_hash()
 
 TEST( hash, basic_test )
 {
-	using hash = ctle::hash<256>;
+	using hash = ctle::digest<256>;
 
 	const hash hsh0 = from_string<hash>( "0000000000000000000000000000000000000000000000000000000000000000" ); // lowest
 	const hash hsh1 = from_string<hash>( "0000000000000000ffffffffffffffffffffffffffffffffffffffffffffffff" );
@@ -43,7 +43,7 @@ TEST( hash, basic_test )
 	auto h2 = hsh3;
 	EXPECT_TRUE( h2 == hsh3 );
 
-	std::vector<hash> a = { random_hash<hash::hash_size>() , random_hash<hash::hash_size>() };
+	std::vector<hash> a = { random_hash<hash::digest_size>() , random_hash<hash::digest_size>() };
 	std::vector<hash> b;
 	EXPECT_FALSE( a == b );
 	EXPECT_TRUE( a != b );
@@ -115,59 +115,67 @@ TEST( hash, basic_test )
 		std::map<hash, hash> idmap;
 		for( size_t inx = 0; inx < 1000; ++inx )
 		{
-			hash myid = random_hash<hash::hash_size>();
+			hash myid = random_hash<hash::digest_size>();
 			idmap[myid] = myid;
 		}
 		EXPECT_EQ( idmap.size(), 1000 );
 	}
 }
 
-TEST( hash, sha256_hashing )
+template<size_t _Size>
+static void test_hash_of_size()
 {
-	using hash = ctle::hash<256>;
+	using hash = ctle::digest<_Size>;
 
-	if( true )
+	std::vector<hash> a = { random_hash<hash::digest_size>() , random_hash<hash::digest_size>() };
+	std::vector<hash> b;
+	EXPECT_FALSE( a == b );
+	EXPECT_TRUE( a != b );
+	EXPECT_TRUE( b.empty() );
+
+	b = std::move( a );
+	EXPECT_FALSE( a == b );
+	EXPECT_TRUE( a != b );
+	EXPECT_TRUE( a.empty() );
+
+	a = b;
+	EXPECT_TRUE( a == b );
+	EXPECT_FALSE( a != b );
+
+	hash q1 = random_hash<hash::digest_size>();
+	auto q1string = ctle::to_string(q1);
+	hash q2 = ctle::from_string<hash>(q1string);
+
+	bool success = true;
+	hash q3 = ctle::from_string<hash>(q1string,success);
+	EXPECT_TRUE( success );
+
+	hash q4 = ctle::from_string<hash>("invalid",success);
+	EXPECT_FALSE( success );
+
+	success = true;
+	hash q5 = ctle::hex_string_to_value<hash>(q1string.c_str(),success);
+	EXPECT_TRUE( success );
+
+	hash qempty;
+	for( size_t inx=0; inx<_Size/8; ++inx )
 	{
-		hash sha;
-
-		u8 testdata[] = {
-			0x34,0x2b,0x1f,0x3e,0x61,
-			0x4b,0x03,0x4b,0x02,0x36,
-			0x05,0x5c,0x17,0x29,0x3d,
-			0x53,0x0e,0x5e,0x5b,0x4d,
-			0x52,0x5f,0x12,0x20,0x0a,
-			0x56,0x31,0x3b,0x2c,0x06,
-			0x51,0x28,0x28,0x5d,0x05,
-			0x59,0x2b,0x41,0x0d,0x1f,
-			0x01,0x01,0x1b,0x1f,0x09,
-			0x2c,0x13,0x01,0x46,0x19,
-			0x05,0x3e,0x3c,0x2d,0x58,
-			0x16,0x5f,0x19,0x0f,0x07,
-			0x39,0x48,0x46,0x4b,0x23,
-			0x06,0x15,0x0b,0x44,0x18,
-			0x0e,0x38,0x56,0x0e,0x0a,
-			0x0e,0x54,0x43,0x0a,0x31,
-			0x2d,0x51,0x0d,0x2a,0x5a,
-			0x09,0x06,0x10,0x23,0x24,
-			0x23,0x33,0x2e,0x1d,0x56,
-			0x48,0x2f,0x4a,0x33,0x06
-		};
-
-		ctle::calculate_sha256_hash( sha, testdata, sizeof( testdata ) );
-
-		u8 expected_hash[32] = {
-			0xf6,0x48,0x54,0x2d,0xf8,0xcc,0xf2,0x1f,
-			0xd3,0x4e,0x95,0xf6,0x7d,0xf5,0xf2,0xb4,
-			0xf2,0x72,0x72,0xaa,0x14,0xf5,0x03,0x09,
-			0x0c,0xc4,0x76,0x6f,0xe2,0x78,0xc4,0xb5
-		};
-
-		EXPECT_EQ( memcmp( sha.data, expected_hash, 32 ), 0 );
-
-		std::stringstream sts;
-		sts << sha;
-		hash shafromstring = from_string<hash>(sts.str());
-		EXPECT_TRUE( sha == shafromstring );
-
+		EXPECT_EQ( qempty.data[inx] , 0 );
 	}
+
+	EXPECT_TRUE( q1 == q2 );
+	EXPECT_FALSE( q1 == qempty );
+	EXPECT_TRUE( q1 == q3 );
+	EXPECT_FALSE( q1 == q4 );
+	EXPECT_TRUE( q4 == qempty );
+	EXPECT_TRUE( q1 == q5 );
+	EXPECT_FALSE( q5 == qempty );
+}
+
+TEST( hash, all_sizes )
+{
+	test_hash_of_size<64>();
+	test_hash_of_size<128>();
+	test_hash_of_size<256>();
+	test_hash_of_size<512>();
 }

@@ -1,7 +1,7 @@
 # ctle Copyright (c) 2022 Ulrik Lindahl
 # Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
 
-from .formatted_output import formatted_output
+from ctlepy import formatted_output
 
 main_comment = '''//
 // _macros.inl & _undef_macros.inl are used to define convenience macros 
@@ -115,7 +115,7 @@ def generate_macros( path:str, undef_path:str ):
 	add_macro( 'ctStatusCall', '''
 #define ctStatusCall( s ) \\
 	{\\
-		ctle::status _ctle_call_status = s; \\
+		ctle::status _ctle_call_status = (s); \\
 		if( !_ctle_call_status ) {\\
 			ctLogError << "Call: " << #s << " failed, returned status_code: " << _ctle_call_status << ctLogEnd;\\
 			return _ctle_call_status;\\
@@ -129,7 +129,7 @@ def generate_macros( path:str, undef_path:str ):
 	add_macro( 'ctStatusReturnCall', '''
 #define ctStatusReturnCall( retval , scall ) \\
     {\\
-		auto _ctle_call_statuspair = scall; \\
+		auto _ctle_call_statuspair = (scall); \\
 		if( !_ctle_call_statuspair.status() ) {\\
 			ctLogError << "Call: " << #scall << " failed, returned status_code: " << _ctle_call_statuspair.status() << ctLogEnd;\\
 			return _ctle_call_statuspair.status();\\
@@ -143,6 +143,18 @@ def generate_macros( path:str, undef_path:str ):
 	add_macro( 'ctStatusAutoReturnCall', '''
 #define ctStatusAutoReturnCall( retval , scall )\\
 	decltype( scall )::value_type retval; ctStatusReturnCall( retval, scall )
+''' )
+
+	def_text.comment_ln('Calls a function which returns a ctle::status value, checks the value and throws a status_error exception if the value if it is an error, along with a log output')
+	add_macro( 'ctStatusCallThrow', '''
+#define ctStatusCallThrow( s ) \\
+	{\\
+		ctle::status _ctle_call_status = (s); \\
+		if( !_ctle_call_status ) {\\
+			ctLogError << "Call: " << #s << " failed, returned status_code: " << _ctle_call_status << ", throwing a status_error exception" << ctLogEnd;\\
+			throw ctle::status_error( _ctle_call_status );\\
+		}\\
+	}
 ''' )
 
 

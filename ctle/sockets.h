@@ -1,9 +1,15 @@
-// ctle Copyright (c) 2021 Ulrik Lindahl
+// ctle Copyright (c) 2024 Ulrik Lindahl
 // Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
 #pragma once
+#ifndef _CTLE_SOCKETS_H_
+#define _CTLE_SOCKETS_H_
+
+/// @file sockets.h 
+/// @brief Sockets library for ctle, for creating and managing sockets, and for creating server sockets.
 
 #include <functional>
 #include <memory>
+#include <string>
 
 #include "status.h"
 #include "status_return.h"
@@ -14,6 +20,7 @@ class socket;
 class stream_socket;
 class server_socket;
 
+/// @brief The protocol family for the socket
 enum class socket_protocol_family
 {
 	unspecified,
@@ -21,17 +28,22 @@ enum class socket_protocol_family
 	ipv6,
 };
 
-// initialize sockets code. not required to be called, but recommended for 
-// defensive reasons, if the sockets cannot be initialized, and for performance, 
-// since the sockets library keep an internal tally of how many sockets
-// are allocated, and deinitializes if the tally falls to 0, if the user
-// has not explicitly called initialize_sockets.
+/// @brief Initialize the sockets code.
+/// @details Initializes the sockets code. Not required to be called, but recommended for 
+/// defensive reasons, if the sockets cannot be initialized, and for performance, 
+/// since the sockets library keep an internal tally of how many sockets
+/// are allocated, and deinitializes if the tally falls to 0, if the user
+/// has not explicitly called initialize_sockets.
+/// @returns status::ok if the sockets are initialized, or an error code if the sockets could not be initialized.
 status initialize_sockets();
 
-// deinitialize sockets code. deinitializes for real when the allocated sockets are 0
+/// @brief Deinitialize the sockets code.
+/// Deinitialize sockets code. If sockets are still allocated, deinitializes for real when the allocated sockets are 0
+/// @returns status::ok if the call succeeded, or an error code if the sockets could not be deinitialized.
 status deinitialize_sockets();
 
-// base class for sockets. not used directly, implements generic functionality shared by derived classes
+/// @brief The base class for the sockets.
+/// @details Base class for sockets. Not to be used directly, implements generic functionality shared by derived classes
 class socket
 {
 public:
@@ -48,6 +60,7 @@ protected:
 	std::unique_ptr<file> socket_file;
 };
 
+/// @brief A stream socket for sending and receiving data.
 class stream_socket : public socket
 {
 public:
@@ -57,29 +70,32 @@ public:
 	stream_socket& operator=(stream_socket&&);
 	~stream_socket();
 
-	// create and connect a stream socket to a specified address and port
+	/// @brief Create and connect a stream socket to a specified address and port
 	static status_return<status,std::unique_ptr<stream_socket>> connect(const std::string &address, uint16_t port, socket_protocol_family protocol_family = socket_protocol_family::ipv4);
 	static status_return<status,std::unique_ptr<stream_socket>> connect(const std::string &address, const std::string &port, socket_protocol_family protocol_family = socket_protocol_family::ipv4);
 
-	// send a message on a socket
-	// buf - data buffer to copy from
-	// buflen - number of bytes to send 
-	// sent - actual number of bytes sent
+	/// @brief send a message on a socket
+	/// @param buf data buffer to copy from
+	/// @param buflen number of bytes to send 
+	/// @param sent receives actual number of bytes sent
+	/// @returns status::ok if the message was sent, or an error code if the call failed
 	status send(const void* buf, size_t buflen, size_t& sent);
 
-	// receive a message on a socket
-	// buf - data buffer to copy to
-	// buflen - number of bytes to receive 
-	// received - actual number of bytes received
+	/// @brief receive a message on a socket
+	/// @param buf data buffer to copy to
+	/// @param buflen number of bytes to receive 
+	/// @param received actual number of bytes received
+	/// @returns status::ok if the message was received, or an error code if the call failed
 	status recv(void* buf, size_t buflen, size_t& received);
 };
 
+/// @brief A server socket for accepting incoming connections.
 class server_socket : public socket
 {
 public:
 	using serve_func = const std::function<status(stream_socket)>;
 	
-	// the state of the server
+	/// @brief state of the server
 	enum class server_state
 	{
 		stopped,
@@ -91,20 +107,27 @@ public:
 	server_socket();
 	~server_socket();
 
-	// opens a socket and runs a blocking listen() + accept() loop. 
-	// to stop the server, call the stop() function from another thread.
-	// to run the server async, wrap the call in an std::async() call.
-	// the port is the port or port type (e.g. "http") to listen to
-	// serve_function is called for each accepted connection, and is responsible to handle the connection (e.g. spawn a thread to handle the incoming connection)
-	// protocol_family is either ip4 or ip6
-	// backlog_size is the number of incoming connections to keep in queue when handling the current connection
+	/// @brief Start the server (blocking call)
+	/// @details Opens a socket and runs a blocking listen() + accept() loop. 
+	/// To stop the server, call the stop() function from another thread.
+	/// To run the server async, wrap the call in an std::async() call.
+	/// @param port port number or port type string (e.g. "http") to listen to
+	/// @param serve_function a function to call for each accepted connection, and is 
+	/// responsible to handle the connection(e.g.spawn a thread to handle the incoming connection)
+	/// @param protocol_family is either ip4 or ip6
+	/// @param backlog_size is the number of incoming connections to keep in queue when handling the current connection
+	/// @returns status::ok if the server was started and ran successfully (since this is a blocking 
+	/// call), or an error code if the server could not be started
 	status start(uint16_t port, const serve_func& serve_function, socket_protocol_family protocol_family = socket_protocol_family::ipv4, size_t backlog_size = 10);
 	status start(const std::string &port, const serve_func& serve_function, socket_protocol_family protocol_family = socket_protocol_family::ipv4, size_t backlog_size = 10);
 
-	// stops the server. this needs to be called from another thread than start(), which will block until the server is signaled to stop
+	/// @brief Stop the server
+	/// @details Signals the server to stop. This needs to be called from another thread than start(), which will block until the server is signaled to stop. 
+	/// To make sure the server stops, check the server_state() function.
+	/// @returns status::ok if the call succeeded (the server was signaled to stop), or an error code if the server could not be stopped
 	status stop();
 
-	// get the state of the server
+	/// @brief get the current state of the server
 	server_state get_server_state() const;
 
 private:
@@ -720,3 +743,5 @@ server_socket::server_state server_socket::get_server_state() const
 #include "_undef_macros.inl"
 
 #endif//CTLE_IMPLEMENTATION
+
+#endif//_CTLE_SOCKETS_H_

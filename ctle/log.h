@@ -1,36 +1,91 @@
-// ctle Copyright (c) 2021 Ulrik Lindahl
+// ctle Copyright (c) 2024 Ulrik Lindahl
 // Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
-
 #pragma once
+#ifndef _CTLE_LOG_H_
+#define _CTLE_LOG_H_
+
+/// @file log.h
+/// @brief A simple logging system for ctle, with log levels and a global log function.
+/// @details The log system is a simple logging system, which can be used to log messages with different log levels.
+/// To use the log system with a set of macros, see the example below.
+/// @code{.cpp}
+/// // Example macros for logging with the ctle log system
+/// 
+/// // General function signature macro usable in both MSVC and GCC/Clang
+/// #if defined(_MSC_VER)
+/// #define _EX_FUNCTION_SIGNATURE __FUNCSIG__
+/// #elif defined(__GNUC__)
+/// #define _EX_FUNCTION_SIGNATURE __PRETTY_FUNCTION__ 
+/// #endif		   
+/// 
+/// // _EX_STRINGIZE converts a number macro (like __LINE__) into a string.
+/// // The _EX_STRINGIZE_DETAIL is needed because of how macros work in the preprocessor
+/// // E.g. use _EX_STRINGIZE(__LINE__) to use __LINE__ as a string macro
+/// // (i.e. convert any number or value to a string: 1 -> "1" )
+/// #define _EX_STRINGIZE_DETAIL(x) #x
+/// #define _EX_STRINGIZE(x) _EX_STRINGIZE_DETAIL(x)
+/// 
+/// // Logging macros for the log.h ctle type
+/// #define EX_LOG_LEVEL( msg_level )\
+/// 	if( ctle::log_level::msg_level <= ctle::get_global_log_level() ) {\
+/// 		ctle::log_msg _EX_log_entry(ctle::log_level::msg_level,__FILE__,__LINE__,_EX_FUNCTION_SIGNATURE); _EX_log_entry.message()
+/// #define EX_LOG_ERROR EX_LOG_LEVEL( error )
+/// #define EX_LOG_WARNING EX_LOG_LEVEL( warning )
+/// #define EX_LOG_INFO EX_LOG_LEVEL( info )
+/// #define EX_LOG_DEBUG EX_LOG_LEVEL( debug )
+/// #define EX_LOG_VERBOSE EX_LOG_LEVEL( verbose )
+/// #define EX_LOG_END ""; }
+///
+/// @endcode
+/// 
+/// To use the macros, include the log.h file, and then use the macros in your code like this:
+/// @code{.cpp}
+/// EX_LOG_INFO << "This is an info message" << EX_LOG_END;
+/// EX_LOG_DEBUG << "This is a debug message" << EX_LOG_END;
+/// @endcode
+
 
 #include <sstream>
 
 namespace ctle
 {
 
+/// @brief The log levels, used to filter log messages.
 enum class log_level : unsigned int
 {
-	error = 0,		// log errors
-	warning = 1,	// log warnings
-	info = 2,		// log important info, (default level)
-	debug = 3,		// log debug messages 
-	verbose = 4		// log extra verbose debug info 
+	error = 0,		///< log errors
+	warning = 1,	///< log warnings
+	info = 2,		///< log important info, (default level)
+	debug = 3,		///< log debug messages 
+	verbose = 4		///< log extra verbose debug info 
 };
 
 typedef void ( *log_function )( log_level level, const char *function_name, const char *message );
 
-// set/get the global log level, used to filter logs
-void set_global_log_level( log_level level );
+/// @brief set the global log level, used to filter logs
+/// @param level the log level to set
+void set_global_log_level(log_level level);
+
+/// @brief get the global log level
+/// @return the current global log level
 log_level get_global_log_level();
 
-// get the log_level value as a string
-const char *get_log_level_as_string( log_level level );
+/// @brief get the log_level value as a string
+/// @param level the log_level value
+/// @return the log_level value as a string
+const char* get_log_level_as_string(log_level level);
 
 // set/get the global log function, which receives the log messages
-void set_global_log_function( log_function func );
+
+/// @brief Set the global log function, which receives the log messages. This will replace any current log function.
+/// @param func the log function to set
+void set_global_log_function(log_function func);
+
+/// @brief Get the global log function, which receives the log messages.
+/// @return the current global log function
 log_function get_global_log_function();
 
-// log a message when the object goes out of scope
+/// @brief A log message object, which logs a message when it goes out of scope. Can be used with a stream to construct the message.
 class log_msg
 {
 private:
@@ -56,8 +111,9 @@ public:
 		this->enter_msg();
 	}
 
-	// access the message member to construct the message
-	std::stringstream &message()
+	/// @brief access the message member to construct the message
+	/// @return a reference to the message stream, which is used to construct the message
+	std::stringstream& message()
 	{
 		return msg;
 	}
@@ -191,3 +247,5 @@ void log_msg::enter_msg()
 #define ctle_log_end ""; }
 
 #endif//CTLE_IMPLEMENT_EXAMPLE_LOG_MACROS
+
+#endif//_CTLE_LOG_H_

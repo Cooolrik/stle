@@ -1,7 +1,7 @@
 # ctle Copyright (c) 2022 Ulrik Lindahl
 # Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
 
-from .formatted_output import formatted_output
+from ctlepy import formatted_output
 
 class error_value:
 	def __init__(self,name,value,mapped_value,description):
@@ -164,11 +164,10 @@ def generate_status( path:str ):
 	out = formatted_output()
 
 	out.generate_license_header()
-	out.ln()
+	guard_def = out.begin_header_guard( 'status.h', 'ctle' )
 
-	out.lines.append( '''#pragma once
-
-#include <iostream>
+	out.lines.append( '''
+#include <iosfwd>
 
 namespace ctle
 {
@@ -240,16 +239,11 @@ namespace ctle
 
 		// get a description of the status code value
 		const char* description() const;
-	};
-
-	class status_error : public std::runtime_error
-	{
-		public:
-			status value;
-			explicit status_error( status _value, char const* const _Message = "" ) noexcept : std::runtime_error(_Message), value(_value) {}
-	};				  
+	};		  
 }
 // namespace ctle
+
+std::ostream &operator<<( std::ostream &os, const ctle::status &_status );
 
 #ifdef CTLE_IMPLEMENTATION
 
@@ -354,14 +348,18 @@ namespace ctle
 }
 // namespace ctle
 
-#endif//CTLE_IMPLEMENTATION  
-
 // stream operator for writing a status to a stream
-inline std::ostream &operator<<( std::ostream &os, const ctle::status &_status )
+std::ostream &operator<<( std::ostream &os, const ctle::status &_status )
 {
 	os << _status.name() << std::string(" (\\"") << _status.description() << std::string("\\")");
 	return os;
 }
+				  
+#endif//CTLE_IMPLEMENTATION  
+
 ''')	
-			
+	out.indentation = 0
+	
+	out.end_header_guard( guard_def )
+
 	out.write_lines_to_file( path )

@@ -1,42 +1,63 @@
-// ctle Copyright (c) 2023 Ulrik Lindahl
+// ctle Copyright (c) 2024 Ulrik Lindahl
 // Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
-
 #pragma once
+#ifndef _CTLE_BITMAP_FONT_H_
+#define _CTLE_BITMAP_FONT_H_
+
+/// @file bitmap_font.h
+/// @brief An ultralight - weight font render.
+///
+///	@attention Code page 437 (ascii + ), fixed width font only
+/// @tparam _Ty is the pixel type of the output image to render to
 
 #include <cstdint>
-#include <string.h>
+#include <cstring>
 
 namespace ctle
 {
 
+/// @brief Get the glyph for a character in the fixed 9x16 font.
+/// 
+/// @param ch The character to get the glyph for.
+/// @return Pointer to the glyph data.
 const uint16_t *get_fixed_9x16_font_glyph( uint8_t ch );
 
-// a ultralight-weight font render. Codepage 437 (ascii+), fixed width font only
-// _Ty is the pixel type of the output image to render to
-
-// the render flags 
+/// @brief Flags for rendering the bitmap font.
 enum class bitmap_font_flags : int
 {
-	center_vertically = 0x1,	// output points at the center pixel vertically
-	center_horizontally = 0x2,	// output points at the center pixel horizontally
-	render_off_pixels = 0x4,	// render 'off' pixels as well
-	flip_y = 0x8,				// flip the letters vertically, for when y points up 
+    center_vertically = 0x1,    ///< Output points at the center pixel vertically.
+    center_horizontally = 0x2,  ///< Output points at the center pixel horizontally.
+    render_off_pixels = 0x4,    ///< Render 'off' pixels as well.
+    flip_y = 0x8,               ///< Flip the letters vertically, for when y points up.
 };
 
-// render to the output pixel buffer. 
-// line_stride is the number of pixels to the next row
-// txt is the character string to render
-// x & y is the position within the output pixel buffer, counted with output as origin
+/// @brief Render the bitmap font to the output pixel buffer.
+/// 
+/// @tparam _Ty The pixel type of the output image to render to.
+/// @param output The output pixel buffer.
+/// @param line_stride The number of pixels to the next row.
+/// @param x The x position within the output pixel buffer.
+/// @param y The y position within the output pixel buffer.
+/// @param txt The character string to render.
+/// @param pixel_on The pixel value for 'on' pixels.
+/// @param pixel_off The pixel value for 'off' pixels (default is {}).
+/// @param flags The rendering flags (default is {}).
 template<class _Ty> void render_bitmap_font( _Ty *output, uint32_t line_stride, uint32_t x, uint32_t y, const char *txt, _Ty pixel_on, _Ty pixel_off = {}, bitmap_font_flags flags = {} )
 {
-	output += x + ( y * line_stride ); // move output pointer to the x,y coord
-	render_bitmap_font( output, line_stride, txt, strlen( txt ), pixel_on, pixel_off, flags );
+    output += x + ( y * line_stride ); // move output pointer to the x,y coord
+    render_bitmap_font( output, line_stride, txt, strlen( txt ), pixel_on, pixel_off, flags );
 }
 
-// render to the output pixel buffer. 
-// line_stride is the number of pixels to the next row
-// txt is the character string to render
-// txt_length is the number of characters in txt to render
+/// @brief Render the bitmap font to the output pixel buffer.
+/// 
+/// @tparam _Ty The pixel type of the output image to render to.
+/// @param output The output pixel buffer.
+/// @param _line_stride The number of pixels to the next row.
+/// @param txt The character string to render.
+/// @param txt_length The number of characters in txt to render.
+/// @param pixel_on The pixel value for 'on' pixels.
+/// @param pixel_off The pixel value for 'off' pixels (default is {}).
+/// @param flags The rendering flags (default is {}).
 template<class _Ty> void render_bitmap_font( _Ty *output, uint32_t _line_stride, const char *txt, size_t txt_length, _Ty pixel_on, _Ty pixel_off = {}, bitmap_font_flags flags = {} )
 {
 	const bool center_vertically = ( (int)flags & (int)bitmap_font_flags::center_vertically );
@@ -372,3 +393,5 @@ inline ctle::bitmap_font_flags operator| ( const ctle::bitmap_font_flags &a, con
 {
 	return (ctle::bitmap_font_flags)( (int)a | (int)b );
 }
+
+#endif//_CTLE_BITMAP_FONT_H_

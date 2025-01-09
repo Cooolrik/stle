@@ -1,7 +1,8 @@
-// ctle Copyright (c) 2022 Ulrik Lindahl
+// ctle Copyright (c) 2024 Ulrik Lindahl
 // Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
-
 #pragma once
+#ifndef _CTLE_STATUS_RETURN_H_
+#define _CTLE_STATUS_RETURN_H_
 
 #include <type_traits>
 #include <utility>
@@ -100,3 +101,4 @@ public:
 
 }
 //namespace ctle
+#endif//_CTLE_STATUS_RETURN_H_

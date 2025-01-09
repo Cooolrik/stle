@@ -1,7 +1,8 @@
-// ctle Copyright (c) 2022 Ulrik Lindahl
+// ctle Copyright (c) 2024 Ulrik Lindahl
 // Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
-
 #pragma once
+#ifndef _CTLE_STRING_FUNCS_H_
+#define _CTLE_STRING_FUNCS_H_
 
 #include "endianness.h"
 
@@ -510,3 +511,5 @@ template <> inline uint64_t hex_string_to_value<uint64_t>( const char *hex_strin
 
 }
 // namespace ctle
+
+#endif//_CTLE_STRING_FUNCS_H_

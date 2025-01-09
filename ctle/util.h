@@ -1,7 +1,8 @@
-// ctle Copyright (c) 2022 Ulrik Lindahl
+// ctle Copyright (c) 2024 Ulrik Lindahl
 // Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
-
 #pragma once
+#ifndef _CTLE_UTIL_H_
+#define _CTLE_UTIL_H_
 
 #include <type_traits>
 
@@ -43,3 +44,4 @@ void *nil_object::allocation = &nil_object_mem;
 
 }
 //namespace ctle
+#endif//_CTLE_UTIL_H_

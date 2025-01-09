@@ -1,7 +1,11 @@
-// Bashers Delight Renderer, Copyright (c) 2023 Ulrik Lindahl
-// Licensed under the MIT license https://github.com/Cooolrik/bashers-delight/blob/main/LICENSE
-
+// ctle Copyright (c) 2024 Ulrik Lindahl
+// Licensed under the MIT license https://github.com/Cooolrik/ctle/blob/main/LICENSE
 #pragma once
+#ifndef _CTLE_MULTITHREAD_POOL_H_
+#define _CTLE_MULTITHREAD_POOL_H_
+
+/// @file multithread_pool.h
+/// @brief A pool of objects which can be shared by tasks in multiple threads.
 
 #include <vector>
 #include <unordered_set>
@@ -10,11 +14,13 @@
 namespace ctle
 {
 
-// The multithread_pool template is used to create a multithread pool, a pool of objects which
-// can be shared by multiple threads. The objects are assumed to be expensive to allocate or
-// have allocated, so it makes more sense to share them among multiple threads/jobs, instead
-// of having one pool per thread. On init, a vector of preallocated objects are inserted to the pool
-// and on deinit, the list of objects are returned, so that the caller can deallocate the objects.
+/// @brief A multithread pool of objects, which can be shared by tasks in multiple threads.
+/// @details The multithread_pool template is used to create a pool of objects which
+/// can be shared by multiple threads. The objects are assumed to be expensive to allocate or
+/// have allocated, so it makes more sense to share them among multiple threads/tasks, instead
+/// of having one pool per thread. On init, a vector of preallocated objects are inserted to the pool
+/// and when the pool is deinitialized, the list of objects is returned, so that the caller 
+/// can deallocate the objects in a correct fashion. If the objects automatically clean up, 
 template<class _Ty>
 class multithread_pool
 {
@@ -34,8 +40,8 @@ private:
 public:
 	using value_type = _Ty;
 
-	// Initialize the pool, and hand over a list of preallocated objects.
-	// Note! Not thread safe, this method is assumed to only be called on setup, so is not guarded
+	/// @brief Initialize the pool, and hand over a list of preallocated objects.
+	/// @note Not thread safe, this method is assumed to only be called on setup, so is not guarded from multiple threads.
 	void initialize( std::vector<std::unique_ptr<_Ty>> &objectList )
 	{
 		this->pool = std::move( objectList );
@@ -46,26 +52,44 @@ public:
 		}
 	}
 
-	// clears the pool, and returns all objects back to the caller
-	// Note! Any non-returned items will also be moved back to the caller
-	void deinitialize( std::vector<std::unique_ptr<_Ty>> &objectList )
+	/// @brief Clears the pool, and returns all objects back to the caller.
+	/// @note All items are moved back to the caller, even borrowed items which have not yet been returned. 
+	/// @return false if the pool has outstanding borrowed items, true if all items are returned since before.
+	bool deinitialize(std::vector<std::unique_ptr<_Ty>>& objectList)
 	{
 		readers_writer_lock::write_guard guard( this->accessLock );
 
 		// move all pool objects to the return object list
-		objectList = std::move( this->pool );
+		objectList = std::move(this->pool);
+
+		// check if there are any borrowed items left
+		return this->borrowed.empty();
 	}
 
-	// returns true if there is an item available in the pool
+	/// @brief returns true if there is an item available in the pool
 	bool item_available()
 	{
 		readers_writer_lock::read_guard guard( this->accessLock );
-
 		return !available.empty();
 	}
 
-	// borrow an item from the pool
-	_Ty *borrow_item()
+	/// @brief returns the number of items available in the pool
+	size_t available_count()
+	{
+		readers_writer_lock::read_guard guard( this->accessLock );
+		return available.size();
+	}
+
+	/// @brief returns true if any item is borrowed from the pool
+	bool item_borrowed()
+	{
+		readers_writer_lock::read_guard guard( this->accessLock );
+		return !borrowed.empty();
+	}
+
+	/// @brief borrow an item from the pool
+	/// @return a pointer to the item, or nullptr if no item is available
+	_Ty* borrow_item()
 	{
 		readers_writer_lock::write_guard guard( this->accessLock );
 
@@ -81,12 +105,14 @@ public:
 		return ret;
 	}
 
-	// return an item to the pool
-	bool return_item( _Ty *item )
+	/// @brief return an item to the pool
+	/// @param item the item to return, must be a valid item from the pool
+	/// @return true if the item was returned, false if the item was not borrowed from the pool, and cannot be returned
+	bool return_item(_Ty* item)
 	{
 		readers_writer_lock::write_guard guard( this->accessLock );
 
-		// check that we have the item
+		// check that we have the item in the pool
 		auto it = this->borrowed.find( item );
 		if( it == this->borrowed.end() )
 			return false;
@@ -102,3 +128,5 @@ public:
 
 }
 //namespace ctle
+
+#endif//_CTLE_MULTITHREAD_POOL_H_

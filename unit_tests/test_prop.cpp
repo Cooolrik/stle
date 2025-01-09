@@ -3,6 +3,7 @@
 
 #include "../ctle/prop.h"
 #include "../ctle/status_return.h"
+#include "../ctle/status_error.h"
 
 #include "unit_tests.h"
 

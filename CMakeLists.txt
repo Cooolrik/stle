@@ -1,7 +1,12 @@
 cmake_minimum_required(VERSION 3.21)
 project( ctle )
 
+# if this is the main project, create test project as default
+if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
+option( CTLE_BUILD_TESTS "Build the ctle tests" ON )
+else()
 option( CTLE_BUILD_TESTS "Build the ctle tests" OFF )
+endif()
 
 find_package(PythonInterp 3.10 REQUIRED)
 find_package(Python 3.10 REQUIRED)
@@ -9,7 +14,7 @@ find_package(Python 3.10 REQUIRED)
 # generate needed code
 execute_process( 
 	COMMAND 			${PYTHON_EXECUTABLE} generate.py
-	WORKING_DIRECTORY 	${CMAKE_CURRENT_LIST_DIR}
+	WORKING_DIRECTORY 	${CMAKE_CURRENT_LIST_DIR}/code_gen
 	RESULT_VARIABLE 	py_result
 )
 message(STATUS "Result of generate.py: ${py_result}")
@@ -17,6 +22,7 @@ message(STATUS "Result of generate.py: ${py_result}")
 # if selected, build the testing code
 # (note: the fetched modules are only needed to test behavior and interops, not needed for use in a project)
 if(CTLE_BUILD_TESTS)			
+	message(STATUS "Building ctle test project")
 	
 	include(FetchContent)
 				
@@ -35,22 +41,31 @@ if(CTLE_BUILD_TESTS)
 		GIT_TAG        6fdeff4d67f3db493d47c44da20aa1efaa6574ef # (2020 Aug 06)
 	)
 	
-	# picosha2 - used by hash.h to calculate sha256 hashes
+	# picosha2 - used by hasher.h to calculate sha256 hashes
 	FetchContent_Declare( 
 		picosha2
 		GIT_REPOSITORY https://github.com/okdshin/PicoSHA2.git
 		GIT_TAG		   27fcf6979298949e8a462e16d09a0351c18fcaf2 # (2022 Aug 08)
 	)
 
+	# xxHash - used by hasher.h to calculate xxHash hashes XXH64 and XXH128
+	FetchContent_Declare( 
+		xxhash
+		GIT_REPOSITORY https://github.com/Cyan4973/xxHash.git
+		GIT_TAG		   bbb27a5efb85b92a0486cf361a8635715a53f6ba # (2023 Jul 21)
+	)
+
+
 	FetchContent_MakeAvailable( 
 		googletest 
 		glm
 		picosha2
+		xxhash
 		)
 		
 	# lots of warnings and all warnings as errors
 	if(MSVC)
-		add_compile_options(/W4)
+		add_compile_options(/W4 /bigobj)
 	else()
 		add_compile_options(-Wall -Wextra -pedantic) # -Werror
 	endif()
@@ -62,9 +77,15 @@ if(CTLE_BUILD_TESTS)
         ./unit_tests/unit_tests.cpp
         ./unit_tests/unit_tests.h
 
+		./ctle/ctle.h
+
 		./ctle/bimap.h
 		./ctle/bitmap_font.h
 		./ctle/endianness.h
+		./ctle/read_stream.h
+		./ctle/write_stream.h
+		./ctle/data_source.h
+		./ctle/data_destination.h
 		./ctle/file_funcs.h
 		./ctle/idx_vector.h
 		./ctle/log.h
@@ -79,8 +100,10 @@ if(CTLE_BUILD_TESTS)
 		./ctle/string_funcs.h
 		./ctle/thread_safe_map.h
 		./ctle/types.h
+		./ctle/ntup.h
 		./ctle/uuid.h
-		./ctle/hash.h
+		./ctle/digest.h
+		./ctle/hasher.h
 		./ctle/util.h
 		./ctle/sockets.h
 		./ctle/_macros.inl
@@ -105,9 +128,17 @@ if(CTLE_BUILD_TESTS)
 		./unit_tests/test_types.cpp
 		./unit_tests/test_util.cpp
 		./unit_tests/test_uuid.cpp
-		./unit_tests/test_hash.cpp
+		./unit_tests/test_digest.cpp
+		./unit_tests/test_hasher.cpp
 		./unit_tests/test_macros.cpp
 		./unit_tests/test_sockets.cpp
+		./unit_tests/test_data_stream.cpp
+		./unit_tests/test_data_source.cpp		
+		./unit_tests/test_data_destination.cpp		
+
+		./unit_tests/unit_tests_variants.cpp
+
+		${xxhash_SOURCE_DIR}/xxhash.c
 
 		./ctle.natvis
 		)
@@ -117,6 +148,7 @@ if(CTLE_BUILD_TESTS)
 		
 		PUBLIC ${glm_SOURCE_DIR}
 		PUBLIC ${picosha2_SOURCE_DIR}
+		PUBLIC ${xxhash_SOURCE_DIR}
 		)
 
 	if(MSVC)

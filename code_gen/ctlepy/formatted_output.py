@@ -90,6 +90,20 @@ class formatted_output:
 		self.comment_ln(f'{project_name} Copyright (c) {copyright_holder}')
 		self.comment_ln(f'Licensed under the {license_type} license {license_link}')
 
+	def begin_header_guard(self, file_name:str, project_name:str='ctle') -> str:
+		'''Beings the header guard for the file'''
+		def todef(s:str):
+			return s.upper().replace("-", "_").replace(" ", "_").replace(".", "_")
+		guard_def = todef(f'_{project_name}_{file_name}_')
+		self.ln('#pragma once')
+		self.ln(f'#ifndef {guard_def}')
+		self.ln(f'#define {guard_def}')
+		return guard_def
+
+	def end_header_guard(self, guard_def:str):
+		'''Ends the header guard for the file'''
+		self.ln(f'#endif//{guard_def}')
+
 	def inline_file(self, path:str):
 		'''Injects the contents of another file, indented at the current indentation level'''
 		inlined_file = open(path, 'r')
